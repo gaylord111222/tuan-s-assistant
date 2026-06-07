@@ -567,7 +567,8 @@ const GMAIL_CLIENT_ID = '212291466430-duhdm05ti2q9u6i7oca8f94i1gla8ve2.apps.goog
 let gmailToken = null;
 
 function connectGmail() {
-  const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${GMAIL_CLIENT_ID}&redirect_uri=${encodeURIComponent(window.location.href)}&response_type=token&scope=https://www.googleapis.com/auth/gmail.readonly`;
+  const cleanUrl = window.location.href.split('#')[0];
+const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${GMAIL_CLIENT_ID}&redirect_uri=${encodeURIComponent(cleanUrl)}&response_type=token&scope=https://www.googleapis.com/auth/gmail.readonly`;
   window.location.href = authUrl;
 }
 
