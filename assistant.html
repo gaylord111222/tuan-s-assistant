@@ -337,7 +337,7 @@
       <div class="gmail-connect" id="gmail-connect">
         <div style="font-size:40px">📬</div>
         <p>Real Gmail connection needs a short one-time setup.<br/>For now, tap below to see a demo of what it'll look like.</p>
-        <button class="gmail-btn" onclick="loadDemoEmails()">
+        <button class="gmail-btn" onclick="connectGmail()">
           <span>📧</span> Load demo emails
         </button>
       </div>
@@ -562,31 +562,66 @@ async function searchCity() {
 }
 loadWeather();
 
-// DEMO EMAILS
-function loadDemoEmails() {
-  document.getElementById('gmail-connect').style.display = 'none';
-  const emails = [
-    { from: 'Google Workspace', subject: 'Action required: Verify your account', tag: 'urgent', tagLabel: 'Urgent', summary: 'Google is asking you to verify your account. You should act on this today to avoid any issues.' },
-    { from: 'Weekly Newsletter', subject: 'Top stories this week', tag: 'ok', tagLabel: 'Low priority', summary: 'A weekly news digest. Nothing urgent — read it when you have free time.' },
-    { from: 'GitHub', subject: 'Your pull request was merged', tag: 'new', tagLabel: 'New', summary: 'A code change you submitted was accepted. No action needed.' },
-  ];
-  const list = document.getElementById('email-list');
-  list.style.display = 'block';
-  list.innerHTML = emails.map(e => `
-    <div class="email-item">
-      <div class="email-row">
-        <div class="email-from">${e.from}</div>
-        <span class="tag tag-${e.tag}">${e.tagLabel}</span>
-      </div>
-      <div class="email-subject">${e.subject}</div>
-      <div class="email-summary">🤖 ${e.summary}</div>
-    </div>
-  `).join('');
-  document.getElementById('email-ai-summary').style.display = 'block';
-  document.getElementById('email-summary-text').textContent =
-    'You have 3 emails. Only the Google account verification needs attention today. The newsletter and GitHub notification are low priority.';
+// GMAIL
+const GMAIL_CLIENT_ID = '212291466430-duhdm05ti2q9u6i7oca8f94i1gla8ve2.apps.googleusercontent.com';
+let gmailToken = null;
+
+function connectGmail() {
+  const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${GMAIL_CLIENT_ID}&redirect_uri=${encodeURIComponent(window.location.href)}&response_type=token&scope=https://www.googleapis.com/auth/gmail.readonly`;
+  window.location.href = authUrl;
 }
 
+async function loadEmails() {
+  if (!gmailToken) return;
+  document.getElementById('gmail-connect').style.display = 'none';
+  document.getElementById('email-list').style.display = 'block';
+  document.getElementById('email-list').innerHTML = '<div style="color:var(--muted);font-size:13px;padding:20px 0;text-align:center">Loading emails...</div>';
+  try {
+    const today = new Date();
+    const dateStr = `${today.getFullYear()}/${String(today.getMonth()+1).padStart(2,'0')}/${String(today.getDate()).padStart(2,'0')}`;
+    const r = await fetch(`https://gmail.googleapis.com/gmail/v1/users/me/messages?maxResults=10&q=after:${dateStr}`, {
+      headers: { Authorization: `Bearer ${gmailToken}` }
+    });
+    const d = await r.json();
+    if (!d.messages || d.messages.length === 0) {
+      document.getElementById('email-list').innerHTML = '<div style="color:var(--muted);font-size:13px;padding:20px 0;text-align:center">No emails today 🎉</div>';
+      return;
+    }
+    const emails = await Promise.all(d.messages.slice(0,5).map(async m => {
+      const mr = await fetch(`https://gmail.googleapis.com/gmail/v1/users/me/messages/${m.id}?format=metadata&metadataHeaders=From&metadataHeaders=Subject`, {
+        headers: { Authorization: `Bearer ${gmailToken}` }
+      });
+      return mr.json();
+    }));
+    const list = document.getElementById('email-list');
+    list.innerHTML = emails.map(e => {
+      const from = e.payload.headers.find(h => h.name === 'From')?.value || 'Unknown';
+      const subject = e.payload.headers.find(h => h.name === 'Subject')?.value || '(no subject)';
+      const fromName = from.replace(/<.*>/, '').trim() || from;
+      return `<div class="email-item">
+        <div class="email-from">${fromName}</div>
+        <div class="email-subject">${subject}</div>
+      </div>`;
+    }).join('');
+    document.getElementById('email-ai-summary').style.display = 'block';
+    const subjects = emails.map(e => e.payload.headers.find(h=>h.name==='Subject')?.value || '').join(', ');
+    document.getElementById('email-summary-text').textContent = `You have ${emails.length} emails today. Subjects: ${subjects}`;
+  } catch(e) {
+    document.getElementById('email-list').innerHTML = '<div style="color:var(--red);font-size:13px;padding:10px 0">Error loading emails. Try reconnecting.</div>';
+  }
+}
+
+function checkGmailToken() {
+  const hash = window.location.hash;
+  if (hash.includes('access_token')) {
+    const params = new URLSearchParams(hash.substring(1));
+    gmailToken = params.get('access_token');
+    window.location.hash = '';
+    show('email');
+    loadEmails();
+  }
+}
+checkGmailToken();
 // NOTIFICATIONS
 function enableNotif() {
   if (!('Notification' in window)) { alert('Notifications not supported in this browser. Try Chrome.'); return; }
