@@ -197,6 +197,22 @@
   .tag-new { background: var(--accent-dim); color: var(--accent); border: 1px solid var(--accent); }
   .tag-ok { background: var(--green-dim); color: var(--green); border: 1px solid var(--green); }
 
+  /* EMAIL DISCONNECT */
+  .disconnect-btn {
+    background: var(--red-dim); border: 1px solid var(--red);
+    border-radius: 8px; padding: 7px 14px;
+    color: var(--red); font-size: 12px; font-family: 'DM Sans', sans-serif;
+    cursor: pointer; margin-top: 10px; width: 100%;
+  }
+  .disconnect-btn:hover { opacity: 0.8; }
+  .notif-link {
+    width: 28px; height: 28px; border-radius: 8px; flex-shrink: 0;
+    background: var(--surface2); border: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; text-decoration: none;
+    transition: border-color 0.15s; align-self: center; margin-left: auto;
+  }
+  .notif-link:hover { border-color: var(--accent); }
   /* NOTIF */
   .notif-item { display: flex; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--border); align-items: flex-start; }
   .notif-item:last-child { border-bottom: none; }
@@ -333,15 +349,19 @@
   <!-- EMAIL PANEL -->
   <div class="panel" id="panel-email">
     <div class="card">
-      <div class="card-label">Gmail — tuanthecreep@gmail.com</div>
       <div class="gmail-connect" id="gmail-connect">
         <div style="font-size:40px">📬</div>
-        <p>Real Gmail connection needs a short one-time setup.<br/>For now, tap below to see a demo of what it'll look like.</p>
+        <p>Connect your Gmail to see today's emails.</p>
         <button class="gmail-btn" onclick="connectGmail()">
-          <span>📧</span> Load demo emails
+          <span>📧</span> Connect Gmail
         </button>
       </div>
-      <div id="email-list" style="display:none"></div>
+      <div id="gmail-connected-header" style="display:none">
+        <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.1em;font-weight:600;margin-bottom:4px">Gmail</div>
+        <div id="gmail-account-label" style="font-size:12px;color:var(--green);margin-bottom:8px">Connected</div>
+        <button class="disconnect-btn" onclick="disconnectGmail()">🔄 Switch / Disconnect account</button>
+      </div>
+      <div id="email-list" style="display:none;margin-top:12px"></div>
     </div>
     <div class="card" id="email-ai-summary" style="display:none">
       <div class="card-label">AI summary</div>
@@ -355,27 +375,48 @@
       <div class="card-label">Today's notifications</div>
       <div class="notif-item">
         <div class="notif-icon" style="background:var(--accent-dim)">📧</div>
-        <div>
+        <div style="flex:1">
           <div class="notif-app">Gmail</div>
           <div class="notif-text">3 new emails — 1 may need your reply today</div>
           <div class="notif-time">2 hours ago</div>
         </div>
+        <a class="notif-link" href="https://mail.google.com" target="_blank">↗</a>
       </div>
       <div class="notif-item">
         <div class="notif-icon" style="background:var(--amber-dim)">📅</div>
-        <div>
-          <div class="notif-app">Reminder</div>
+        <div style="flex:1">
+          <div class="notif-app">Google Calendar</div>
           <div class="notif-text">You have a meeting reminder set for this afternoon</div>
           <div class="notif-time">1 hour ago</div>
         </div>
+        <a class="notif-link" href="https://calendar.google.com" target="_blank">↗</a>
       </div>
       <div class="notif-item">
         <div class="notif-icon" style="background:var(--green-dim)">🌤</div>
-        <div>
+        <div style="flex:1">
           <div class="notif-app">Weather</div>
           <div class="notif-text" id="notif-weather">Check weather tab for Da Nang forecast</div>
           <div class="notif-time">Just now</div>
         </div>
+        <a class="notif-link" href="#" onclick="show('weather');return false;">↗</a>
+      </div>
+      <div class="notif-item">
+        <div class="notif-icon" style="background:var(--surface2)">📰</div>
+        <div style="flex:1">
+          <div class="notif-app">Google News</div>
+          <div class="notif-text">Top stories updated for today</div>
+          <div class="notif-time">30 min ago</div>
+        </div>
+        <a class="notif-link" href="https://news.google.com" target="_blank">↗</a>
+      </div>
+      <div class="notif-item">
+        <div class="notif-icon" style="background:var(--red-dim)">▶️</div>
+        <div style="flex:1">
+          <div class="notif-app">YouTube</div>
+          <div class="notif-text">New videos from channels you follow</div>
+          <div class="notif-time">1 hour ago</div>
+        </div>
+        <a class="notif-link" href="https://youtube.com" target="_blank">↗</a>
       </div>
     </div>
     <button class="notif-enable-btn" onclick="enableNotif()">
@@ -384,14 +425,10 @@
     <div class="card">
       <div class="card-label">Note about Android</div>
       <div style="font-size:13px; color: var(--muted); line-height:1.6">
-        To get notifications on your Android phone, open this file in <strong style="color:var(--text)">Chrome on Android</strong> and tap "Add to Home Screen". It will work like an app. Full Android notification access requires a native app — I can help you build that later.
+        To use on Android, open the link in <strong style="color:var(--text)">Chrome</strong> and tap "Add to Home Screen".
       </div>
     </div>
   </div>
-
-</div>
-
-<script>
 // CLOCK
 function updateClock() {
   const now = new Date();
@@ -568,16 +605,34 @@ let gmailToken = null;
 
 function connectGmail() {
   const cleanUrl = window.location.href.split('#')[0];
-const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${GMAIL_CLIENT_ID}&redirect_uri=${encodeURIComponent(cleanUrl)}&response_type=token&scope=https://www.googleapis.com/auth/gmail.readonly`;
+  const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${GMAIL_CLIENT_ID}&redirect_uri=${encodeURIComponent(cleanUrl)}&response_type=token&scope=https://www.googleapis.com/auth/gmail.readonly&prompt=select_account`;
   window.location.href = authUrl;
+}
+
+function disconnectGmail() {
+  gmailToken = null;
+  document.getElementById('gmail-connect').style.display = 'flex';
+  document.getElementById('gmail-connected-header').style.display = 'none';
+  document.getElementById('email-list').style.display = 'none';
+  document.getElementById('email-list').innerHTML = '';
+  document.getElementById('email-ai-summary').style.display = 'none';
+  connectGmail();
 }
 
 async function loadEmails() {
   if (!gmailToken) return;
   document.getElementById('gmail-connect').style.display = 'none';
+  document.getElementById('gmail-connected-header').style.display = 'block';
   document.getElementById('email-list').style.display = 'block';
   document.getElementById('email-list').innerHTML = '<div style="color:var(--muted);font-size:13px;padding:20px 0;text-align:center">Loading emails...</div>';
   try {
+    const profileRes = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/profile', {
+      headers: { Authorization: `Bearer ${gmailToken}` }
+    });
+    const profile = await profileRes.json();
+    if (profile.emailAddress) {
+      document.getElementById('gmail-account-label').textContent = '✅ ' + profile.emailAddress;
+    }
     const today = new Date();
     const dateStr = `${today.getFullYear()}/${String(today.getMonth()+1).padStart(2,'0')}/${String(today.getDate()).padStart(2,'0')}`;
     const r = await fetch(`https://gmail.googleapis.com/gmail/v1/users/me/messages?maxResults=10&q=after:${dateStr}`, {
@@ -600,7 +655,10 @@ async function loadEmails() {
       const subject = e.payload.headers.find(h => h.name === 'Subject')?.value || '(no subject)';
       const fromName = from.replace(/<.*>/, '').trim() || from;
       return `<div class="email-item">
-        <div class="email-from">${fromName}</div>
+        <div class="email-row">
+          <div class="email-from">${fromName}</div>
+          <a href="https://mail.google.com/mail/u/0/#inbox/${e.id}" target="_blank" style="font-size:11px;color:var(--accent);text-decoration:none;flex-shrink:0;">Open ↗</a>
+        </div>
         <div class="email-subject">${subject}</div>
       </div>`;
     }).join('');
