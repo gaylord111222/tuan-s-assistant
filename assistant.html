@@ -456,10 +456,10 @@
           <div class="u-label">Gmail Summary</div>
           <div class="u-desc">Today's emails</div>
         </div>
-        <div class="utility-item" style="opacity:0.4; cursor:default">
-          <div class="u-icon">💬</div>
-          <div class="u-label">Zalo</div>
-          <div class="u-desc">Coming soon</div>
+       <div class="utility-item" onclick="openMiRemote()">
+          <div class="u-icon">📺</div>
+          <div class="u-label">Mi Remote</div>
+          <div class="u-desc">Phone only</div>
         </div>
         <div class="utility-item" style="opacity:0.4; cursor:default">
           <div class="u-icon">📱</div>
@@ -723,7 +723,16 @@ function checkGmailToken() {
   }
 }
 checkGmailToken();
-// NOTIFICATIONS
+// MI REMOTE
+function openMiRemote() {
+  const isAndroid = /android/i.test(navigator.userAgent);
+  if (!isAndroid) {
+    alert('Mi Remote is only available on your Redmi phone.');
+    return;
+  }
+  window.location.href = 'intent://com.duokan.phone.remotecontroller#Intent;scheme=app;package=com.duokan.phone.remotecontroller;end';
+}
+    // NOTIFICATIONS
 function enableNotif() {
   if (!('Notification' in window)) { alert('Notifications not supported in this browser. Try Chrome.'); return; }
   Notification.requestPermission().then(p => {
