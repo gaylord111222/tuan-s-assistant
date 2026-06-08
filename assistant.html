@@ -730,7 +730,7 @@ function openMiRemote() {
     alert('Mi Remote is only available on your Redmi phone.');
     return;
   }
-  window.location.href = 'intent://com.duokan.phone.remotecontroller#Intent;scheme=app;package=com.duokan.phone.remotecontroller;end';
+ window.location.href = 'intent:#Intent;package=com.duokan.phone.remotecontroller;action=android.intent.action.MAIN;category=android.intent.category.LAUNCHER;end';
 }
     // NOTIFICATIONS
 function enableNotif() {
