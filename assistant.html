@@ -742,7 +742,7 @@ function toggleGmailNotif() {
   if (gmailNotifOn) {
     alert('✅ Gmail summary ON — Google Script will send tonight at 10pm.');
   } else {
-    alert('🔕 Gmail summary OFF — Go to script.google.com → Triggers → pause your trigger to stop emails.');
+    window.open('https://script.google.com', '_blank');
   }
 }
 updateToggleUI();
