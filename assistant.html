@@ -288,6 +288,10 @@
       <svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
       Utility
     </button>
+    <button class="tab" onclick="show('settings')" id="tab-settings">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      Settings
+    </button>
   </div>
 
   <!-- CHAT PANEL -->
@@ -317,8 +321,9 @@
       <button class="quick-btn" onclick="quickAsk('Give me 3 productivity tips for today')">
         <strong>⚡ Productivity</strong>Tips for today
       </button>
-      <button class="quick-btn" onclick="quickAsk('What are some good lunch spots in Da Nang?')">
-        <strong>🍜 Lunch ideas</strong>Where to eat in Da Nang
+    <button class="quick-btn" id="mic-btn" onclick="toggleSpeech()" style="display:flex; align-items:center; justify-content:center; gap:8px;">
+        <strong style="font-size:20px">🎤</strong>
+        <span id="mic-label" style="font-size:12px; color:var(--muted)">Press to talk</span>
       </button>
       <button class="quick-btn" onclick="quickAsk('Translate this to English: xin chào, bạn khỏe không?')">
         <strong>🌐 Translate</strong>Vietnamese ↔ English
@@ -445,7 +450,37 @@
       </div>
     </div>
   </div>
+<!-- SETTINGS PANEL -->
+  <div class="panel" id="panel-settings">
+    <div class="card">
+      <div class="card-label">Voice settings</div>
 
+      <div style="margin-bottom:16px">
+        <div style="font-size:13px; font-weight:500; margin-bottom:8px">🔊 AI speaking volume</div>
+        <input type="range" min="0" max="1" step="0.1"
+          value="1" id="speak-vol"
+          oninput="updateSpeakVol(this.value)"
+          style="width:100%; accent-color:var(--accent);" />
+        <div style="font-size:11px; color:var(--muted); margin-top:4px">How loud the AI speaks back to you</div>
+      </div>
+
+      <div>
+        <div style="font-size:13px; font-weight:500; margin-bottom:8px">🎤 Microphone sensitivity</div>
+        <input type="range" min="0" max="1" step="0.1"
+          value="0.5" id="mic-sensitivity"
+          oninput="updateMicSensitivity(this.value)"
+          style="width:100%; accent-color:var(--accent);" />
+        <div style="font-size:11px; color:var(--muted); margin-top:4px">How easily the mic picks up your voice</div>
+      </div>
+
+    </div>
+    <div class="card">
+      <div class="card-label">Test voice</div>
+      <button onclick="speak('Hello Tuan! Your assistant is ready.')" style="width:100%; background:var(--accent); border:none; border-radius:8px; padding:10px; color:#fff; font-family:\'DM Sans\',sans-serif; font-size:13px; cursor:pointer;">
+        🔊 Test AI voice
+      </button>
+    </div>
+  </div>
   <!-- UTILITY PANEL -->
   <div class="panel" id="panel-utility">
     <div class="card">
@@ -728,7 +763,21 @@ function checkGmailToken() {
   }
 }
 checkGmailToken();
-// GMAIL NOTIF TOGGLE
+// VOICE SETTINGS
+function updateSpeakVol(val) {
+  localStorage.setItem('tuan_speakVol', val);
+}
+function updateMicSensitivity(val) {
+  localStorage.setItem('tuan_micSensitivity', val);
+}
+// Load saved settings
+window.addEventListener('load', () => {
+  const vol = localStorage.getItem('tuan_speakVol') || '1';
+  const mic = localStorage.getItem('tuan_micSensitivity') || '0.5';
+  if (document.getElementById('speak-vol')) document.getElementById('speak-vol').value = vol;
+  if (document.getElementById('mic-sensitivity')) document.getElementById('mic-sensitivity').value = mic;
+});
+    // GMAIL NOTIF TOGGLE
 let gmailNotifOn = localStorage.getItem('gmailNotif') !== 'false';
 function updateToggleUI() {
   document.getElementById('toggle-icon').textContent = gmailNotifOn ? '🔔' : '🔕';
@@ -746,6 +795,103 @@ function toggleGmailNotif() {
   }
 }
 updateToggleUI();
+    // SPEECH
+let recognition = null;
+let isListening = false;
+
+function toggleSpeech() {
+  if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+    alert('Speech recognition not supported. Use Chrome on Android.');
+    return;
+  }
+  if (isListening) {
+    recognition.stop();
+    return;
+  }
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  recognition = new SpeechRecognition();
+  // SPEECH OUTPUT
+function speak(text, onDone) {
+  const utterance = new SpeechSynthesisUtterance(text);
+  utterance.lang = 'en-US';
+  utterance.volume = parseFloat(localStorage.getItem('tuan_speakVol') || '1');
+  utterance.rate = 1;
+  utterance.pitch = 1;
+  if (onDone) utterance.onend = onDone;
+  window.speechSynthesis.speak(utterance);
+}
+  recognition.lang = 'en-US';
+  recognition.continuous = false;
+  recognition.interimResults = false;
+
+  recognition.onstart = () => {
+    isListening = true;
+    document.getElementById('mic-btn').style.borderColor = 'var(--red)';
+    document.getElementById('mic-label').textContent = 'Listening...';
+  };
+
+  recognition.onresult = (event) => {
+    const transcript = event.results[0][0].transcript;
+    document.getElementById('mic-label').textContent = 'Press to talk';
+    document.getElementById('mic-btn').style.borderColor = 'var(--border)';
+    handleSpeechCommand(transcript);
+  };
+
+  recognition.onerror = () => {
+    isListening = false;
+    document.getElementById('mic-label').textContent = 'Press to talk';
+    document.getElementById('mic-btn').style.borderColor = 'var(--border)';
+  };
+
+  recognition.onend = () => {
+    isListening = false;
+    document.getElementById('mic-btn').style.borderColor = 'var(--border)';
+    document.getElementById('mic-label').textContent = 'Press to talk';
+  };
+
+  recognition.start();
+}
+
+function handleSpeechCommand(text) {
+  addBubble('user', '🎤 ' + text);
+  const lower = text.toLowerCase();
+
+  // WEATHER command
+  if (lower.includes('weather')) {
+    show('chat');
+    document.getElementById('chat-input').value = text;
+    sendChat();
+    return;
+  }
+
+  // EMAIL command
+  if (lower.includes('email') || lower.includes('gmail')) {
+    show('email');
+    speak('Done. Opening your emails.');
+    addBubble('bot', 'Done ✅ Opening your emails.');
+    return;
+  }
+
+  // WEATHER TAB command
+  if (lower.includes('open weather')) {
+    show('weather');
+    speak('Done. Opening weather.');
+    addBubble('bot', 'Done ✅ Opening weather tab.');
+    return;
+  }
+
+  // UTILITY command
+  if (lower.includes('utility') || lower.includes('tools')) {
+    show('utility');
+    speak('Done. Opening utility.');
+    addBubble('bot', 'Done ✅ Opening utility tab.');
+    return;
+  }
+
+  // DEFAULT — send to AI chat
+  show('chat');
+  document.getElementById('chat-input').value = text;
+  sendChat();
     // MI REMOTE
 function openMiRemote() {
   const isAndroid = /android/i.test(navigator.userAgent);
