@@ -895,17 +895,6 @@ function handleSpeechCommand(text) {
   sendChat();
 }
 
-// SPEECH OUTPUT
-function speak(text, onDone) {
-  const utterance = new SpeechSynthesisUtterance(text);
-  utterance.lang = 'en-US';
-  utterance.volume = parseFloat(localStorage.getItem('tuan_speakVol') || '1');
-  utterance.rate = 1;
-  utterance.pitch = 1;
-  if (onDone) utterance.onend = onDone;
-  window.speechSynthesis.speak(utterance);
-}
-
 // MI REMOTE
 function openMiRemote() {
   const isAndroid = /android/i.test(navigator.userAgent);
