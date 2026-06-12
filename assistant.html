@@ -456,6 +456,11 @@
           <div class="u-label">Gmail Summary</div>
           <div class="u-desc">Today's emails</div>
         </div>
+        <div class="utility-item" onclick="toggleGmailNotif()" id="gmail-notif-toggle">
+          <div class="u-icon" id="toggle-icon">🔔</div>
+          <div class="u-label">10pm Notif</div>
+          <div class="u-desc" id="toggle-desc">ON</div>
+        </div>
        <div class="utility-item" onclick="openMiRemote()">
           <div class="u-icon">📺</div>
           <div class="u-label">Mi Remote</div>
@@ -723,7 +728,25 @@ function checkGmailToken() {
   }
 }
 checkGmailToken();
-// MI REMOTE
+// GMAIL NOTIF TOGGLE
+let gmailNotifOn = localStorage.getItem('gmailNotif') !== 'false';
+function updateToggleUI() {
+  document.getElementById('toggle-icon').textContent = gmailNotifOn ? '🔔' : '🔕';
+  document.getElementById('toggle-desc').textContent = gmailNotifOn ? 'ON' : 'OFF';
+  document.getElementById('gmail-notif-toggle').style.borderColor = gmailNotifOn ? 'var(--green)' : 'var(--red)';
+}
+function toggleGmailNotif() {
+  gmailNotifOn = !gmailNotifOn;
+  localStorage.setItem('gmailNotif', gmailNotifOn);
+  updateToggleUI();
+  if (gmailNotifOn) {
+    alert('✅ Gmail summary ON — Google Script will send tonight at 10pm.');
+  } else {
+    alert('🔕 Gmail summary OFF — Go to script.google.com → Triggers → pause your trigger to stop emails.');
+  }
+}
+updateToggleUI();
+    // MI REMOTE
 function openMiRemote() {
   const isAndroid = /android/i.test(navigator.userAgent);
   if (!isAndroid) {
