@@ -321,10 +321,13 @@
       <button class="quick-btn" onclick="quickAsk('Give me 3 productivity tips for today')">
         <strong>⚡ Productivity</strong>Tips for today
       </button>
-    <button class="quick-btn" id="mic-btn" onclick="toggleSpeech()" style="display:flex; align-items:center; justify-content:center; gap:8px;">
-        <strong style="font-size:20px">🎤</strong>
-        <span id="mic-label" style="font-size:12px; color:var(--muted)">Press to talk</span>
-      </button>
+   <button class="quick-btn" id="mic-btn" onclick="toggleSpeech()" style="display:flex; align-items:center; justify-content:center; gap:8px;">
+  <strong style="font-size:20px">🎤</strong>
+  <span id="mic-label" style="font-size:12px; color:var(--muted)">Press to talk</span>
+</button>
+<button class="quick-btn" id="lang-btn" onclick="toggleLang()" style="display:flex; align-items:center; justify-content:center;">
+  <span id="lang-label" style="font-size:12px; color:var(--muted)">🌐 VI</span>
+</button>
       <button class="quick-btn" onclick="quickAsk('Translate this to English: xin chào, bạn khỏe không?')">
         <strong>🌐 Translate</strong>Vietnamese ↔ English
       </button>
@@ -806,6 +809,12 @@ function toggleGmailNotif() {
   }
 }
 updateToggleUI();
+    let speechLang = localStorage.getItem('speechLang') || 'vi-VN';
+function toggleLang() {
+  speechLang = speechLang === 'vi-VN' ? 'en-US' : 'vi-VN';
+  localStorage.setItem('speechLang', speechLang);
+  document.getElementById('lang-label').textContent = speechLang === 'vi-VN' ? '🌐 VI' : '🌐 EN';
+}
     // SPEECH
 let recognition = null;
 let isListening = false;
@@ -821,7 +830,7 @@ function toggleSpeech() {
   }
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
   recognition = new SpeechRecognition();
-  recognition.lang = 'en-US';
+  recognition.lang = speechLang;
   recognition.continuous = false;
   recognition.interimResults = false;
 
@@ -858,12 +867,38 @@ function handleSpeechCommand(text) {
   const lower = text.toLowerCase();
 
   // WEATHER command
-  if (lower.includes('weather')) {
+if (lower.includes('weather') || lower.includes('thời tiết')) {
     show('chat');
     document.getElementById('chat-input').value = text;
     sendChat();
     return;
   }
+
+  if (lower.includes('email') || lower.includes('gmail') || lower.includes('thư')) {
+    show('email');
+    speak('Xong. Đang mở email của bạn.');
+    addBubble('bot', 'Done ✅ Opening your emails.');
+    return;
+  }
+
+  if (lower.includes('open weather') || lower.includes('mở thời tiết')) {
+    show('weather');
+    speak('Xong. Đang mở thời tiết.');
+    addBubble('bot', 'Done ✅ Opening weather tab.');
+    return;
+  }
+
+  if (lower.includes('utility') || lower.includes('tools') || lower.includes('tiện ích')) {
+    show('utility');
+    speak('Xong. Đang mở tiện ích.');
+    addBubble('bot', 'Done ✅ Opening utility tab.');
+    return;
+  }
+
+  // DEFAULT — send to AI chat
+  show('chat');
+  document.getElementById('chat-input').value = text;
+  sendChat();
 
   // EMAIL command
   if (lower.includes('email') || lower.includes('gmail')) {
