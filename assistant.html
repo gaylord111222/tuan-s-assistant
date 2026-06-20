@@ -896,36 +896,74 @@ if (lower.includes('weather') || lower.includes('thời tiết')) {
     return;
   }
 
+  // OPEN APP command (native apps via Android bridge)
+  const appMap = {
+    'zalo': 'com.zing.zalo',
+    'facebook': 'com.facebook.katana',
+    'youtube': 'com.google.android.youtube',
+    'gmail': 'com.google.android.gm',
+    'chrome': 'com.android.chrome',
+    'messenger': 'com.facebook.orca',
+    'tiktok': 'com.zhiliaoapp.musically'
+    'brave' : 'com.brave.browser'
+  };
+  for (const [keyword, packageName] of Object.entries(appMap)) {
+    if (lower.includes(keyword)) {
+      if (typeof Android !== 'undefined' && Android.openApp) {
+        Android.openApp(packageName);
+        speak('Đang mở ' + keyword);
+        addBubble('bot', 'Done ✅ Opening ' + keyword);
+      } else {
+        addBubble('bot', 'This only works in the installed app.');
+      }
+      return;
+    }
+  }
+
+  // OPEN WEBSITE command
+  if (lower.includes('mở') || lower.includes('open') || lower.includes('tìm kiếm') || lower.includes('search')) {
+  // OPEN WEBSITE command
+  if (lower.includes('mở') || lower.includes('open') || lower.includes('tìm kiếm') || lower.includes('search')) {
+    const thinking = addBubble('bot', 'Finding the right URL...');
+    thinking.classList.add('thinking');
+    try {
+      const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + APIKEY
+        },
+        body: JSON.stringify({
+          model: 'llama-3.1-8b-instant',
+          max_tokens: 50,
+          messages: [
+            { role: 'system', content: 'You are a URL converter. Given a voice command, reply with ONLY the full URL to open, nothing else. No explanation. Examples: "open youtube" → "https://youtube.com", "mở shopee" → "https://shopee.vn", "search pho Da Nang" → "https://www.google.com/search?q=pho+Da+Nang". Always include https://.' },
+            { role: 'user', content: text }
+          ]
+        })
+      });
+      const data = await res.json();
+      const url = data.choices?.[0]?.message?.content?.trim();
+      if (url && url.startsWith('https://')) {
+        thinking.classList.remove('thinking');
+        thinking.textContent = 'Done ✅ Opening ' + url;
+        speak('Xong.');
+        if (typeof Android !== 'undefined' && Android.openUrl) {
+          Android.openUrl(url);
+        } else {
+          window.open(url, '_blank');
+        }
+      } else {
+        thinking.classList.remove('thinking');
+        thinking.textContent = 'Could not find the right URL. Try again.';
+      }
+    } catch(e) {
+      addBubble('bot', 'Connection error. Try again.');
+    }
+    return;
+  }
+
   // DEFAULT — send to AI chat
-  show('chat');
-  document.getElementById('chat-input').value = text;
-  sendChat();
-
-  // EMAIL command
-  if (lower.includes('email') || lower.includes('gmail')) {
-    show('email');
-    speak('Done. Opening your emails.');
-    addBubble('bot', 'Done ✅ Opening your emails.');
-    return;
-  }
-
-  // WEATHER TAB command
-  if (lower.includes('open weather')) {
-    show('weather');
-    speak('Done. Opening weather.');
-    addBubble('bot', 'Done ✅ Opening weather tab.');
-    return;
-  }
-
-  // UTILITY command
-  if (lower.includes('utility') || lower.includes('tools')) {
-    show('utility');
-    speak('Done. Opening utility.');
-    addBubble('bot', 'Done ✅ Opening utility tab.');
-    return;
-  }
-
-  /// DEFAULT — send to AI chat
   show('chat');
   document.getElementById('chat-input').value = text;
   sendChat();
