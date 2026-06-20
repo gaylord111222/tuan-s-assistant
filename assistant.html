@@ -896,6 +896,41 @@ if (lower.includes('weather') || lower.includes('thời tiết')) {
     return;
   }
 
+  // NOTIFICATION READING commands
+  if (lower.includes('thông báo gì') || lower.includes('what notification')) {
+    if (typeof Android !== 'undefined' && Android.getLastNotification) {
+      const data = Android.getLastNotification().split('|||');
+      const sender = data[0];
+      const app = data[2];
+      if (sender) {
+        speak('Bạn có một thông báo từ ' + sender);
+        addBubble('bot', '🔔 New notification from ' + sender + ' (' + app + ')');
+      } else {
+        speak('Không có thông báo mới.');
+        addBubble('bot', 'No new notifications.');
+      }
+    } else {
+      addBubble('bot', 'This feature only works in the installed app.');
+    }
+    return;
+  }
+
+  if (lower.includes('đọc nội dung') || lower.includes('read message')) {
+    if (typeof Android !== 'undefined' && Android.getLastNotification) {
+      const data = Android.getLastNotification().split('|||');
+      const message = data[1];
+      if (message) {
+        speak(message);
+        addBubble('bot', '💬 ' + message);
+      } else {
+        speak('Không có tin nhắn nào.');
+        addBubble('bot', 'No message content available.');
+      }
+    } else {
+      addBubble('bot', 'This feature only works in the installed app.');
+    }
+    return;
+  }
   // OPEN APP command (native apps via Android bridge)
   const appMap = {
     'zalo': 'com.zing.zalo',
