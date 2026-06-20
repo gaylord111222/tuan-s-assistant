@@ -933,12 +933,11 @@ if (lower.includes('weather') || lower.includes('thời tiết')) {
 
 // MI REMOTE
 function openMiRemote() {
-  const isAndroid = /android/i.test(navigator.userAgent);
-  if (!isAndroid) {
-    alert('Mi Remote is only available on your Redmi phone.');
-    return;
+  if (typeof Android !== 'undefined' && Android.openMiRemote) {
+    Android.openMiRemote();
+  } else {
+    alert('Mi Remote only works inside the installed app, not in browser.');
   }
- window.location.href = 'intent:#Intent;package=com.duokan.phone.remotecontroller;action=android.intent.action.MAIN;category=android.intent.category.LAUNCHER;end';
 }
     // NOTIFICATIONS
 function enableNotif() {
