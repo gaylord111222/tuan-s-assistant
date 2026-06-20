@@ -816,6 +816,18 @@ function toggleLang() {
   localStorage.setItem('speechLang', speechLang);
   document.getElementById('lang-label').textContent = speechLang === 'vi-VN' ? '🌐 VI' : '🌐 EN';
 }
+    // AUTO-LISTEN ON NOTIFICATION
+function onNativeNotification() {
+  if (isListening) return; // already listening, don't restart
+  toggleSpeech(); // starts the mic automatically
+
+  // Auto-stop after 20 seconds if nothing said
+  setTimeout(() => {
+    if (isListening && recognition) {
+      recognition.stop();
+    }
+  }, 20000);
+}
     // SPEECH
 let recognition = null;
 let isListening = false;
@@ -896,40 +908,42 @@ if (lower.includes('weather') || lower.includes('thời tiết')) {
     return;
   }
 
-  // NOTIFICATION READING commands
-  if (lower.includes('thông báo gì') || lower.includes('what notification')) {
-    if (typeof Android !== 'undefined' && Android.getLastNotification) {
-      const data = Android.getLastNotification().split('|||');
-      const sender = data[0];
-      const app = data[2];
-      if (sender) {
-        speak('Bạn có một thông báo từ ' + sender);
-        addBubble('bot', '🔔 New notification from ' + sender + ' (' + app + ')');
-      } else {
-        speak('Không có thông báo mới.');
-        addBubble('bot', 'No new notifications.');
-      }
-    } else {
-      addBubble('bot', 'This feature only works in the installed app.');
-    }
-    return;
-  }
+  // AI-DECIDED notification action
+  if (typeof Android !== 'undefined' && Android.getLastNotification) {
+    const notifData = Android.getLastNotification().split('|||');
+    const sender = notifData[0];
+    const message = notifData[1];
+    const app = notifData[2];
 
-  if (lower.includes('đọc nội dung') || lower.includes('read message')) {
-    if (typeof Android !== 'undefined' && Android.getLastNotification) {
-      const data = Android.getLastNotification().split('|||');
-      const message = data[1];
-      if (message) {
-        speak(message);
-        addBubble('bot', '💬 ' + message);
-      } else {
-        speak('Không có tin nhắn nào.');
-        addBubble('bot', 'No message content available.');
+    if (sender || message) {
+      const thinking = addBubble('bot', 'Thinking...');
+      thinking.classList.add('thinking');
+      try {
+        const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + APIKEY
+          },
+          body: JSON.stringify({
+            model: 'llama-3.1-8b-instant',
+            max_tokens: 100,
+            messages: [
+              { role: 'system', content: `You are a notification assistant. A notification arrived from "${sender}" via ${app}, saying: "${message}". The user just said a voice command. Decide what they want: if they're asking WHO sent it, reply with ONLY a short Vietnamese sentence naming the sender. If they're asking WHAT the message says, reply with ONLY the message content read naturally in Vietnamese. If unclear, ask them to clarify. Keep it under 2 sentences.` },
+              { role: 'user', content: text }
+            ]
+          })
+        });
+        const data = await res.json();
+        const reply = data.choices?.[0]?.message?.content || 'Xin lỗi, tôi không hiểu.';
+        thinking.classList.remove('thinking');
+        thinking.textContent = reply;
+        speak(reply);
+      } catch(e) {
+        addBubble('bot', 'Connection error.');
       }
-    } else {
-      addBubble('bot', 'This feature only works in the installed app.');
+      return;
     }
-    return;
   }
   // OPEN APP command (native apps via Android bridge)
   const appMap = {
